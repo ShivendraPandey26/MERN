@@ -22,6 +22,17 @@ app.get("/", (req, res) => {
   res.send("Hello from the backend!");
 });
 
+// routes imports
+import userRouter from "./routes/user.routes.js";
+
+
+
+// routes declarations
+app.use("/api/v1/users", userRouter);
+
+
+
+
 // Connect to MongoDB
 connectDB()
   .then(() => {
