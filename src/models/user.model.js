@@ -27,12 +27,10 @@ const userSchema = new Schema(
     },
     avatar: {
       type: String, //cloudinary url
-      // default: "default.png"
       required: true,
     },
-    coverimage: {
-      type: String, //cloudinary url
-      // default: "default_cover.jpg"
+    coverImage: {
+      type: String,
     },
     watchHistory: [
       {

@@ -1,11 +1,14 @@
-import { config } from "dotenv";
-config();
+import dotenv from "dotenv"
 import connectDB from "./db/index.js";
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
 const app = express();
+
+dotenv.config({
+  path: './.env'
+})
 
 // Environment variables
 const PORT = process.env.PORT || 8080;
