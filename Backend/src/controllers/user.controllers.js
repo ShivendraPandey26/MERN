@@ -1,6 +1,9 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import User from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  uploadOnCloudinary,
+  deleteCloudinaryImage,
+} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -263,6 +266,130 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, req.user, "User fetched successfully"));
 });
 
+// update user details
+const updateUserDetails = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.body;
+
+  if (!fullName || !email) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    {
+      $set: {
+        fullName,
+        email,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User details updated successfully"));
+});
+
+// update User Avatar
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const avatarLocalPath = req.file?.path;
+
+  if (!avatarLocalPath) {
+    return res.status(400).json({ message: "Avatar file is missing" });
+  }
+
+  // delete previous avatar
+  const previousAvatar = await User.findById(req.user.id);
+
+  if (previousAvatar?.avatar) {
+    const isDeleted = await deleteCloudinaryImage(previousAvatar.avatar);
+    if (isDeleted) {
+      console.log("Previous avatar deleted successfully");
+    } else {
+      console.log("Failed to delete previous avatar");
+    }
+  }
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!avatar) {
+    return res.status(400).json({ message: "Error while uploading on avatar" });
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?.id,
+    {
+      $set: {
+        avatar: avatar.url,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User avatar updated successfully"));
+});
+
+// update User Cover Image
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
+  const coverImage = user.coverImage;
+
+  if (coverImage) {
+    // delete previous cover image
+
+    if (coverImage) {
+      const isDeleted = await deleteCloudinaryImage(coverImage);
+      if (isDeleted) {
+        console.log("Previous cover image deleted successfully");
+      } else {
+        console.log("Failed to delete previous cover image");
+      }
+    }
+  }
+
+  const coverImageLocalPath = req.file?.path;
+  if (!coverImageLocalPath) {
+    return res.status(400).json({ message: "Cover image file is missing" });
+  }
+
+  const uploadedCoverImage = await uploadOnCloudinary(coverImageLocalPath);
+  if (!uploadedCoverImage) {
+    return res
+      .status(400)
+      .json({ message: "Error while uploading on cover image" });
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user.id,
+    {
+      $set: {
+        coverImage: uploadedCoverImage.url,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  if (!updatedUser) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedUser, "User cover image updated successfully")
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -270,4 +397,7 @@ export {
   refreshAccessToken,
   changeCurrentPassword,
   getCurrentUser,
+  updateUserDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
 };
