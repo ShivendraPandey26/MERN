@@ -4,7 +4,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
-// generate Access Token and refresh token  
+// generate Access Token and refresh token
 const generateAccessAndRefereshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -23,7 +23,7 @@ const generateAccessAndRefereshTokens = async (userId) => {
   }
 };
 
-// Register new user 
+// Register new user
 const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, username, password } = req.body;
 
@@ -116,7 +116,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const isPasswordValid = await user.isPasswordCorrect(password);
 
   if (!isPasswordValid) {
-    return res.status(401).json({ message: "Invalid credentials" });
+    return res.status(401).json({ message: "Invalid Password" });
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(
@@ -232,4 +232,42 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+// change current password
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldpassword, newpassword } = req.body;
+
+  if (!oldpassword || !newpassword) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  const user = await User.findById(req.user.id);
+
+  const isPasswordCorrect = await user.isPasswordCorrect(oldpassword);
+
+  if (!isPasswordCorrect) {
+    return res.status(401).json({ message: "Incorrect old password" });
+  }
+
+  user.password = newpassword;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Current password changed successfully"));
+});
+
+//get current user
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "User fetched successfully"));
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+};
