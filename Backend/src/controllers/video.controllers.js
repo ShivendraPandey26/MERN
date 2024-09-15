@@ -1,6 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import Video from "../models/video.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  uploadOnCloudinary,
+  deleteCloudinaryImage,
+  deleteCloudinaryVideo,
+} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
 // public video methods
@@ -61,6 +65,72 @@ const publishAVideo = asyncHandler(async (req, res) => {
   }
 });
 
+// get video by id
+const getVideoById = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  // Fetch the video document from the database using the provided videoId
+  try {
+    const video = await Video.findById(videoId);
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, video, "Video fetched successfully"));
+  } catch (err) {
+    // console.error("Error retrieving video from the database:", err);
+    res.status(500).json({
+      message:
+        "Internal server error. Failed to retrieve video. or check your video ID ",
+    });
+  }
+});
+
+// video delete controller
+const deleteVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  // delete video from cloudinary server
+  try {
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+
+    const deleteVideo = await deleteCloudinaryVideo(video.videoFile);
+    const deletedThumbnail = await deleteCloudinaryImage(video.thumbnail);
+
+    if (!deleteVideo || !deletedThumbnail) {
+      return res.status(400).json({
+        message: "Failed to delete video and thumbnail from Cloudinary",
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete video from Cloudinary" });
+  }
+
+  // delete video from database
+  try {
+    const video = await Video.findByIdAndDelete(videoId);
+
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Video deleted successfully"));
+  } catch (error) {
+    res.status(500).json({
+      message:
+        "Internal server error, Failed to delete video from the database",
+    });
+  }
+});
+
 // get All Videos
 const getAllVideos = asyncHandler(async (req, res) => {
   res.status(200).json({
@@ -69,4 +139,4 @@ const getAllVideos = asyncHandler(async (req, res) => {
   });
 });
 
-export { publishAVideo, getAllVideos };
+export { publishAVideo, getAllVideos, getVideoById, deleteVideo };
