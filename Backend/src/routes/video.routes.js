@@ -15,10 +15,8 @@ router
     verifyJWT,
     upload.fields([
       { name: "thumbnail", maxCount: 1 },
-      { name: "video", maxCount: 1 },
+      { name: "videoFile", maxCount: 1 },
     ]),
-    verifyJWT,
-    upload.fields([]),
     publishAVideo
   );
 
