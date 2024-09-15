@@ -65,7 +65,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
   }
 });
 
-// get video by id
+// get video by id and increment of views count
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
@@ -75,6 +75,10 @@ const getVideoById = asyncHandler(async (req, res) => {
     if (!video) {
       return res.status(404).json({ message: "Video not found" });
     }
+
+    // Increment the views count by 1
+    video.views += 1;
+    await video.save({ validateBeforeSave: false });
 
     return res
       .status(200)
@@ -131,6 +135,61 @@ const deleteVideo = asyncHandler(async (req, res) => {
   }
 });
 
+// video update controller
+const updateVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const { title, description } = req.body;
+
+  // Validate user input
+  if (!title && !description) {
+    return res.status(400).json({ message: "At least one field is required" });
+  }
+
+  try {
+    const video = await Video.findById(videoId);
+
+    video.title = title;
+    video.description = description;
+
+    // If a new thumbnail is provided, upload it to Cloudinary
+    const newThumbnailLocalPath = req.file?.path;
+    console.log(newThumbnailLocalPath);
+
+    if (newThumbnailLocalPath) {
+      // Delete the old thumbnail from Cloudinary (if exists)
+      if (video.thumbnail) {
+        const isDeleted = await deleteCloudinaryImage(video.thumbnail);
+        if (!isDeleted) {
+          return res
+            .status(500)
+            .json({ message: "Failed to delete the previous thumbnail" });
+        }
+      }
+
+      // Upload the new thumbnail to Cloudinary
+      const uploadednewThumbnail = await uploadOnCloudinary(
+        newThumbnailLocalPath
+      );
+      if (!uploadednewThumbnail) {
+        return res
+          .status(500)
+          .json({ message: "Failed to upload new thumbnail" });
+      }
+
+      video.thumbnail = uploadednewThumbnail.url;
+    }
+
+    // Save the updated video document in the database
+    const updatedVideo = await video.save({ validateBeforeSave: false });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, updatedVideo, "Video updated successfully"));
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update video in the database" });
+  }
+});
+
 // get All Videos
 const getAllVideos = asyncHandler(async (req, res) => {
   res.status(200).json({
@@ -139,4 +198,4 @@ const getAllVideos = asyncHandler(async (req, res) => {
   });
 });
 
-export { publishAVideo, getAllVideos, getVideoById, deleteVideo };
+export { publishAVideo, getAllVideos, getVideoById, deleteVideo, updateVideo };
