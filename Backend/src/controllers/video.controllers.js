@@ -6,6 +6,7 @@ import {
   deleteCloudinaryVideo,
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import mongoose from "mongoose";
 
 // public video methods
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -190,12 +191,110 @@ const updateVideo = asyncHandler(async (req, res) => {
   }
 });
 
-// get All Videos
-const getAllVideos = asyncHandler(async (req, res) => {
-  res.status(200).json({
-    message: "All Videos",
-    data: "videos",
-  });
+// toggle video publish status
+const togglePublishStatus = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  try {
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+
+    video.isPublished = !video.isPublished;
+    const updatedVideo = await video.save({ validateBeforeSave: false });
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          updatedVideo,
+          "Video publish status toggled successfully"
+        )
+      );
+  } catch (error) {}
 });
 
-export { publishAVideo, getAllVideos, getVideoById, deleteVideo, updateVideo };
+// get All Videos
+const getAllVideos = asyncHandler(async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      query = "",
+      sortBy = "createdAt",
+      sortType = "desc",
+      userId,
+    } = req.query;
+
+    const matchQuery = {
+      $or: [
+        { title: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } },
+      ],
+    };
+
+    if (userId) {
+      matchQuery.owner = new mongoose.Types.ObjectId(userId);
+    }
+
+    const videos = await Video.aggregate([
+      { $match: matchQuery },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "videoBy",
+        },
+      },
+      { $unwind: "$videoBy" },
+      {
+        $project: {
+          thumbnail: 1,
+          videoFile: 1,
+          title: 1,
+          description: 1,
+          duration: 1,
+          views: 1,
+          isPublished: 1,
+          videoBy: {
+            fullName: 1,
+            userName: 1,
+            avatar: 1,
+          },
+        },
+      },
+      { $sort: { [sortBy]: sortType === "asc" ? 1 : -1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: parseInt(limit) },
+    ]);
+
+    return res.status(200).json({
+      status: 200,
+      data: videos,
+      message: "Videos fetched successfully",
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      status: 500,
+      message: "Failed to fetch videos",
+      error: error.message,
+    });
+  }
+});
+
+export {
+  publishAVideo,
+  getAllVideos,
+  getVideoById,
+  deleteVideo,
+  updateVideo,
+  togglePublishStatus,
+};
