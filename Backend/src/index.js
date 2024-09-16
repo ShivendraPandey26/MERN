@@ -28,12 +28,13 @@ app.get("/", (req, res) => {
 // routes imports
 import userRouter from "./routes/user.routes.js";
 import videoRouter from "./routes/video.routes.js"
-
+import tweetRouter from "./routes/tweet.routes.js";
 
 
 // routes declarations
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/video", videoRouter);
+app.use("/api/v1/tweets", tweetRouter)
 
 
 
