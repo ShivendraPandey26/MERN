@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "npm run build",
+    "build": "vite build",
     "dev": "nodemon src/index.js"
   },
   "keywords": [],
