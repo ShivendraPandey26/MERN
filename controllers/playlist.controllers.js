@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import { isValidObjectId } from "mongoose";
 import Playlist from "../models/playlist.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -164,7 +164,34 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 const updatePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   const { name, description } = req.body;
-  //TODO: update playlist
+
+  if (!isValidObjectId(playlistId)) {
+    return res.status(400).json({ message: "Invalid playlist ID" });
+  }
+
+  try {
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(
+      playlistId,
+      {
+        $set: {
+          name,
+          description,
+        },
+      },
+      { new: true }
+    ).populate("videos");
+
+    if (!updatedPlaylist) {
+      return res.status(404).json({ message: "Playlist not found" });
+    }
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, updatedPlaylist, "Playlist updated successfully")
+      );
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update playlist" });
+  }
 });
 
 export {
