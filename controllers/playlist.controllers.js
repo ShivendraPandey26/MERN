@@ -31,7 +31,26 @@ const createPlaylist = asyncHandler(async (req, res) => {
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
   const { userId } = req.params;
-  //TODO: get user playlists
+
+  if (!isValidObjectId(userId)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  try {
+    const playlists = await Playlist.find({ owner: userId });
+
+    if (!playlists) {
+      return res
+        .status(404)
+        .json({ message: "No playlists found for this user" });
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, playlists, "Playlists fetched successfully"));
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to fetch playlists" });
+  }
 });
 
 const getPlaylistById = asyncHandler(async (req, res) => {
