@@ -79,6 +79,32 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
   const { playlistId, videoId } = req.params;
+
+  // Validate IDs
+  if (!isValidObjectId(playlistId) || !isValidObjectId(videoId)) {
+    return res.status(400).json({ message: "Invalid playlist or video ID" });
+  }
+
+  try {
+    // Update playlist by adding video
+    const playlist = await Playlist.findByIdAndUpdate(
+      playlistId,
+      { $addToSet: { videos: videoId } },
+      { new: true, runValidators: true }
+    ).populate("videos");
+
+    if (!playlist) {
+      return res.status(404).json({ message: "Playlist not found" });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: playlist,
+      message: "Video added to playlist successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to add video to playlist" });
+  }
 });
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
