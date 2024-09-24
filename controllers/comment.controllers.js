@@ -73,6 +73,10 @@ const updateComment = asyncHandler(async (req, res) => {});
 const deleteComment = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
   const userId = req.user.id;
+
+  if (!commentId) {
+    return res.status(400).json({ message: "Invalid comment ID" });
+  }
 });
 
 export { getVideoComments, addComment, updateComment, deleteComment };
